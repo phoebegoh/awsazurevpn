@@ -116,6 +116,6 @@ resource "azurerm_virtual_machine" "terraform_vm" {
   }
 
   provisioner "local-exec" {
-          command = "sleep 120; export ANSIBLE_HOST_KEY_CHECKING=False; ansible-playbook -u ubuntu --private-key ./phoebevpn.pem -i '${data.azurerm_public_ip.publicip.ip_address},' phoebe_vpn_azure.yaml -e ansible_python_interpreter=/usr/bin/python3"
+          command = "sleep 120; export ANSIBLE_HOST_KEY_CHECKING=False; ansible-playbook -u ubuntu --private-key ./phoebevpn.pem -i '40.121.147.79,' phoebe_vpn_azure.yaml -e ansible_python_interpreter=/usr/bin/python3 --extra-vars 'azure_private_ip=10.1.0.1 azure_private_subnet=10.1.0.0/24 aws_public_ip=20.30.40.50 aws_private_subnet=172.16.31.0/24'"
   }
 }

@@ -1,0 +1,15 @@
+config setup
+    uniqueids=yes
+
+conn azure-to-aws
+    authby=secret
+    left={{ azure_private_ip }}
+    leftid=azure
+    leftsubnet={{ azure_private_subnet }}
+    right={{ aws_public_ip }}
+    rightid=aws
+    rightsubnet={{ aws_private_subnet }}
+    keyexchange=ikev1
+    ike=aes256-sha2_256-modp1024!
+    esp=aes256-sha2_256!
+    auto=start
