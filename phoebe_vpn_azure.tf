@@ -114,4 +114,8 @@ resource "azurerm_virtual_machine" "terraform_vm" {
       key_data = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCEjKH2cGPmPM5WahGAnElHEzE2tLyaQVlZbyuRtJVo4wVCX8vkZSa4FUam5unlznAkcB27H9UBNmwQtEZbN0i5EQTHXA7AxTGcSVVQxuAoj0GInH0nWcQyjhxHrAmLR8J71KG4oUFx1lDwkUYQdoDI8gMH9pTToO6thyY2BYXFWJBB//XMMC9aaTcnSdpRHFURQqSiwfH2KVwyGi9fAVXvgyLb7ZS9ZVCmVzvFMXk+ojFoN2/3mdt+zb5KYPvEj+HnkDfHXMVo7TwVo9/xw1eCSnA0EjSoeq7YqhtjWxzT/4jOer2gGBxjXrTM6hWb95NspVAJh08tXpwnyHVEklWv"
     }
   }
+
+  provisioner "local-exec" {
+          command = "sleep 120; export ANSIBLE_HOST_KEY_CHECKING=False; ansible-playbook -u ubuntu --private-key ./phoebevpn.pem -i '${data.azurerm_public_ip.publicip.ip_address},' phoebe_vpn_azure.yaml -e ansible_python_interpreter=/usr/bin/python3"
+  }
 }

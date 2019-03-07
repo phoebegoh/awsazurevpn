@@ -1,0 +1,8 @@
+- hosts: all
+  become: true
+
+  tasks:
+    - name: install strongswan
+      apt: name=strongswan update_cache=yes
+    - name: install strongswan-pki
+      apt: name=strongswan-pki update_cache=yes
