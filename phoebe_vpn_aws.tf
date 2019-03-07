@@ -50,19 +50,29 @@ resource "aws_security_group" "sshworld" {
   }
 }
 
-resource "aws_instance" "example" {
+resource "aws_instance" "aws_vpn_server" {
   subnet_id                   = "${aws_subnet.backend.id}"
   ami                         = "ami-0ac019f4fcb7cb7e6"
   associate_public_ip_address = 1
   instance_type               = "t2.micro"
   key_name                    = "phoebevpn"
   vpc_security_group_ids      = ["${aws_security_group.sshworld.id}"]
+}
+
+resource "local_file" "ansible_vars" {
+    content     = "aws_public_ip: ${aws_instance.aws_vpn_server.public_ip}\nazure_public_ip: ${aws_instance.aws_vpn_server.public_ip}"
+    filename = "./ansible_vars.yml"
+}
+resource "null_resource" "local_exec" {
   provisioner "local-exec" {
-        command = "sleep 120; export ANSIBLE_HOST_KEY_CHECKING=False; ansible-playbook -u ubuntu --private-key ./phoebevpn.pem -i '${aws_instance.example.public_ip},' phoebevpn.yaml -e ansible_python_interpreter=/usr/bin/python3"
+        command = "sleep 120; export ANSIBLE_HOST_KEY_CHECKING=False; ansible-playbook -u ubuntu --private-key ./phoebevpn.pem -i '${aws_instance.aws_vpn_server.public_ip},' phoebe_vpn_aws.yaml -e ansible_python_interpreter=/usr/bin/python3"
       }
 }
 
-output "ip" {
-  value = "${aws_instance.example.public_ip}"
+output "aws_private_ip" {
+  value = "${aws_instance.aws_vpn_server.private_ip}"
+}
+output "aws_public_ip" {
+  value = "${aws_instance.aws_vpn_server.public_ip}"
 }
 
