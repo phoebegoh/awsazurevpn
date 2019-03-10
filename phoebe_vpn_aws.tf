@@ -24,7 +24,7 @@ resource "aws_internet_gateway" "gw" {
   vpc_id = "${aws_vpc.main.id}"
 }
 
-resource "aws_route" "r" {
+resource "aws_route" "default" {
   route_table_id         = "${aws_vpc.main.main_route_table_id}"
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = "${aws_internet_gateway.gw.id}"
@@ -60,12 +60,12 @@ resource "aws_instance" "aws_vpn_server" {
 }
 
 resource "local_file" "ansible_vars" {
-    content     = "aws_public_ip: ${aws_instance.aws_vpn_server.public_ip}\nazure_public_ip: ${aws_instance.aws_vpn_server.public_ip}"
+    content     = "aws_public_ip: ${aws_instance.aws_vpn_server.public_ip}\nazure_public_ip: 168.62.188.182"
     filename = "./ansible_vars.yml"
 }
 resource "null_resource" "local_exec" {
   provisioner "local-exec" {
-        command = "sleep 120; export ANSIBLE_HOST_KEY_CHECKING=False; ansible-playbook -u ubuntu --private-key ./phoebevpn.pem -i '${aws_instance.aws_vpn_server.public_ip},' phoebe_vpn_aws.yaml -e ansible_python_interpreter=/usr/bin/python3"
+        command = "sleep 120; export ANSIBLE_HOST_KEY_CHECKING=False; ansible-playbook -u ubuntu --private-key ./phoebevpn.pem -i '${aws_instance.aws_vpn_server.private_ip},' phoebe_vpn_aws.yaml -e ansible_python_interpreter=/usr/bin/python3"
       }
 }
 

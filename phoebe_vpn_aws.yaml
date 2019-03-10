@@ -19,6 +19,10 @@
       lineinfile:
         path: /etc/sysctl.conf
         line: net.ipv4.conf.all.send_redirects=0
+    - name: echo "net/ipv4/ip_no_pmtu_disc=1" >> /etc/sysctl.conf
+      lineinfile:
+        path: /etc/sysctl.conf
+        line: net/ipv4/ip_no_pmtu_disc=1
     - name: sysctl -p /etc/sysctl.conf
       command: sysctl -p /etc/sysctl.conf
     - name: create /etc/ipsec.secrets
@@ -54,3 +58,34 @@
               auto=start
     - name: systemctl restart strongswan
       command: systemctl restart strongswan
+    - name: ufw allow OpenSSH
+      command: ufw allow OpenSSH
+    - name: ufw allow 500,4500/udp
+      command: ufw allow 500,4500/udp
+    - name: insert before *filter
+      blockinfile:
+        dest: /etc/ufw/before.rules
+        block: | 
+          *nat
+          -A POSTROUTING -s 10.0.1.0/24 -o eth0 -m policy --pol ipsec --dir out -j ACCEPT
+          -A POSTROUTING -s 10.0.1.0/24 -o eth0 -j MASQUERADE
+          COMMIT
+
+          *mangle
+          -A FORWARD --match policy --pol ipsec --dir in -s 10.0.1.0/24 -o eth0 -p tcp -m tcp --tcp-flags SYN,RST SYN -m tcpmss --mss 1361:1536 -j TCPMSS --set-mss 1360
+          COMMIT
+        insertbefore: ".*filter"
+    - name: insert after :ufw-not-local - [0:0]
+      lineinfile:
+        path: /etc/ufw/before.rules
+        line: "-A ufw-before-forward --match policy --pol ipsec --dir in --proto esp -s 10.0.1.0/24 -j ACCEPT"
+        insertbefore: "# End required lines"
+    - name: insert after :ufw-not-local - [0:0]
+      lineinfile:
+        path: /etc/ufw/before.rules
+        line: "-A ufw-before-forward --match policy --pol ipsec --dir out --proto esp -d 10.0.1.0/24 -j ACCEPT"
+        insertbefore: "# End required lines"
+    - name: ufw enable
+      ufw:
+        state: enabled
+    
