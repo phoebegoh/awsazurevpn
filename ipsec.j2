@@ -1,15 +1,22 @@
 config setup
     uniqueids=yes
 
-conn azure-to-aws
+conn %default
+    ikelifetime=60m
+    keylife=20m
+    rekeymargin=3m
+    keyingtries=1
     authby=secret
+    keyexchange=ikev2
+    mobike=no
+
+conn azure-to-aws
+    leftid=@azure
     left={{ azure_private_ip }}
-    leftid=azure
     leftsubnet={{ azure_private_subnet }}
+    rightid=@aws
     right={{ aws_public_ip }}
-    rightid=aws
     rightsubnet={{ aws_private_subnet }}
-    keyexchange=ikev1
-    ike=aes256-sha2_256-modp1024!
+    ike=aes256-sha2_256-modp2048!
     esp=aes256-sha2_256!
     auto=start

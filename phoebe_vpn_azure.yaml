@@ -20,10 +20,49 @@
         src: ipsec.j2
         dest: /etc/ipsec.conf
         backup: yes
-    - name: update ipsec secrets
+    - name: update /etc/ipsec.secrets
       copy:
         dest: /etc/ipsec.secrets
         content: |
-          <source ip> <destination ip> : <secrettype>  <secret>
-          left right: PSK 1245
+          #<source ip> <destination ip> : <secrettype>  <secret>
+          @azure @aws : PSK "secret"
+    - name: Allow OpenSSH through firewall
+      ufw:
+        rule: allow
+        name: OpenSSH
+    - name: Allow incoming access on ports 500,4500/udp
+      ufw:
+        rule: allow
+        proto: udp
+        port: '{{ item }}'
+      with_items:
+        - 500
+        - 4500
+    - name: Update /etc/ufw/before.rules for NAT
+      blockinfile:
+        path: /etc/ufw/before.rules
+        block: |
+          *nat
+          -A POSTROUTING -s 172.31.64.0/24 -o eth0 -m policy --pol ipsec --dir out -j ACCEPT
+          -A POSTROUTING -s 172.31.64.0/24 -o eth0 -j MASQUERADE
+          COMMIT
+
+          *mangle
+          -A FORWARD --match policy --pol ipsec --dir in -s 172.31.64.0/24 -o eth0 -p tcp -m tcp --tcp-flags SYN,RST SYN -m tcpmss --mss 1361:1536 -j TCPMSS --set-mss 1360
+          COMMIT
+
+        insertbefore: .*filter
+    - name: Update /etc/ufw/before.rules for ESP
+      blockinfile:
+        path: /etc/ufw/before.rules
+        marker: "## {mark} ANSIBLE MANAGED BLOCK ##"
+        block: |
+          -A ufw-before-forward --match policy --pol ipsec --dir in --proto esp -s 172.31.64.0/24 -j ACCEPT
+          -A ufw-before-forward --match policy --pol ipsec --dir out --proto esp -d 172.31.64.0/24 -j ACCEPT
+        insertafter: "# End required lines"
+    - name: Enable ufw
+      ufw:
+        state: enabled
+    - name: Restart strongswan
+      command: systemctl restart strongswan
       
