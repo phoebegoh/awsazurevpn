@@ -5,7 +5,7 @@ provider "aws" {
 # AWS
 resource "aws_key_pair" "phoebevpn" {
   key_name   = "phoebevpn"
-  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCEjKH2cGPmPM5WahGAnElHEzE2tLyaQVlZbyuRtJVo4wVCX8vkZSa4FUam5unlznAkcB27H9UBNmwQtEZbN0i5EQTHXA7AxTGcSVVQxuAoj0GInH0nWcQyjhxHrAmLR8J71KG4oUFx1lDwkUYQdoDI8gMH9pTToO6thyY2BYXFWJBB//XMMC9aaTcnSdpRHFURQqSiwfH2KVwyGi9fAVXvgyLb7ZS9ZVCmVzvFMXk+ojFoN2/3mdt+zb5KYPvEj+HnkDfHXMVo7TwVo9/xw1eCSnA0EjSoeq7YqhtjWxzT/4jOer2gGBxjXrTM6hWb95NspVAJh08tXpwnyHVEklWv"
+  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCzyQehHEk01+XCMwdTIUHZCu7LIW5Ewx8PnBxw6y7/hKw9qKun1wfn5+NJgc5Dzj8JLBY51TGNdWxOr13e3dz2uizVw6j3tFSgHBT2ifGB/+ET7K8MCY/OUmjqbzukoYswGLQP+03VvwIySeFPfOcDy7i2HfOHYBMFPLA/5glHqDca0pY4+8AHNbrtXOPBMuNBkb05jhL9WcMdOeTq1vErhK04E6aj6Ky+o0oxUEHRgQHyCchkUsvbEexzK4hMMicwnURcMtdyiLab+cJ33//V7ByKvogkEq3RJDDLePNiZSSDldSEWsrQJePRGmcGsQ1jsFjI1JKW0A07PxU98tCT"
 }
 
 resource "aws_vpc" "main" {
@@ -57,18 +57,61 @@ resource "aws_instance" "aws_vpn_server" {
   instance_type               = "t2.micro"
   key_name                    = "phoebevpn"
   vpc_security_group_ids      = ["${aws_security_group.sshworld.id}"]
-}
 
-resource "local_file" "ansible_vars" {
-    content     = "aws_public_ip: ${aws_instance.aws_vpn_server.public_ip}\nazure_public_ip: 168.62.188.182"
-    filename = "./ansible_vars.yml"
-}
-resource "null_resource" "local_exec" {
-  provisioner "local-exec" {
-        command = "sleep 120; export ANSIBLE_HOST_KEY_CHECKING=False; ansible-playbook -u ubuntu --private-key ./phoebevpn.pem -i '${aws_instance.aws_vpn_server.private_ip},' phoebe_vpn_aws.yaml -e ansible_python_interpreter=/usr/bin/python3"
+  provisioner "remote-exec" {
+    inline = [
+      "sudo apt-get -y update",
+      "sudo apt-get -y install software-properties-common",
+      "sudo apt-add-repository --yes --update ppa:ansible/ansible",
+      "sudo apt-get -y install ansible"
+    ]
+    connection {
+      type = "ssh"
+      user = "ubuntu"
+      private_key = "${file("vpn.pem")}"
       }
+  }
+  provisioner "file" {
+   source = "./${local_file.azure_ansible_vars.filename}"
+   destination = "/home/ubuntu/${local_file.azure_ansible_vars.filename}"  
+   connection {
+    type = "ssh"
+    user = "ubuntu"
+    private_key = "${file("vpn.pem")}"
+    }
+  }
+  provisioner "file" {
+   source = "./phoebe_vpn_aws.yaml"
+   destination = "/home/ubuntu/phoebe_vpn_aws.yaml"  
+   connection {
+    type = "ssh"
+    user = "ubuntu"
+    private_key = "${file("vpn.pem")}"
+    }
+  }
 }
 
+resource "local_file" "aws_ansible_vars" {
+    content     = "aws_public_ip: ${aws_instance.aws_vpn_server.public_ip}\naws_private_ip: ${aws_instance.aws_vpn_server.private_ip}\naws_vpn_subnet: ${aws_subnet.backend.cidr_block}"
+    filename = "./aws_ansible_vars.yml"
+}
+
+resource "null_resource" "aws_exec" {
+  provisioner "remote-exec" {
+        inline = ["ansible-playbook phoebe_vpn_aws.yaml"]
+        connection {
+          type = "ssh"
+          user = "ubuntu"
+          private_key = "${file("vpn.pem")}"
+          host = "${aws_instance.aws_vpn_server.public_ip}"
+        }
+  }
+}
+
+
+output "aws_vpn_subnet" {
+  value = "${aws_subnet.backend.cidr_block}"
+}
 output "aws_private_ip" {
   value = "${aws_instance.aws_vpn_server.private_ip}"
 }

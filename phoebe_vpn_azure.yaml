@@ -1,6 +1,7 @@
-- hosts: all
+- hosts: localhost
   become: true
-
+  vars_files:
+    - ./aws_ansible_vars.yml
   tasks:
     - name: install strongswan
       apt: name=strongswan update_cache=yes
@@ -15,11 +16,32 @@
           net.ipv4.conf.all.send_redirects = 0
     - name: refresh kernel parameters
       command: sysctl -p
-    - name: update ipsec.conf
-      template:
-        src: ipsec.j2
-        dest: /etc/ipsec.conf
-        backup: yes
+    - name: create /etc/ipsec.conf
+      copy:
+        dest: "/etc/ipsec.conf"
+        content: |
+          config setup
+
+          conn %default
+              ikelifetime=60m
+              keylife=20m
+              rekeymargin=3m
+              keyingtries=1
+              authby=secret
+              keyexchange=ikev2
+              mobike=no
+
+          conn net-net
+              left={{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}
+              leftsubnet=10.0.1.0/24
+              leftid=@azure
+              leftfirewall=no
+              right={{ aws_public_ip }}
+              rightsubnet={{ aws_vpn_subnet}}
+              rightid=@aws
+              ike=aes256-sha2_256-modp2048!
+              esp=aes256-sha2_256!
+              auto=start
     - name: update /etc/ipsec.secrets
       copy:
         dest: /etc/ipsec.secrets

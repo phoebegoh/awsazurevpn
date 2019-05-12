@@ -101,23 +101,82 @@ resource "azurerm_virtual_machine" "terraform_vm" {
 
     ssh_keys {
       path     = "/home/ubuntu/.ssh/authorized_keys"
-      key_data = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCEjKH2cGPmPM5WahGAnElHEzE2tLyaQVlZbyuRtJVo4wVCX8vkZSa4FUam5unlznAkcB27H9UBNmwQtEZbN0i5EQTHXA7AxTGcSVVQxuAoj0GInH0nWcQyjhxHrAmLR8J71KG4oUFx1lDwkUYQdoDI8gMH9pTToO6thyY2BYXFWJBB//XMMC9aaTcnSdpRHFURQqSiwfH2KVwyGi9fAVXvgyLb7ZS9ZVCmVzvFMXk+ojFoN2/3mdt+zb5KYPvEj+HnkDfHXMVo7TwVo9/xw1eCSnA0EjSoeq7YqhtjWxzT/4jOer2gGBxjXrTM6hWb95NspVAJh08tXpwnyHVEklWv"
+      key_data = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCzyQehHEk01+XCMwdTIUHZCu7LIW5Ewx8PnBxw6y7/hKw9qKun1wfn5+NJgc5Dzj8JLBY51TGNdWxOr13e3dz2uizVw6j3tFSgHBT2ifGB/+ET7K8MCY/OUmjqbzukoYswGLQP+03VvwIySeFPfOcDy7i2HfOHYBMFPLA/5glHqDca0pY4+8AHNbrtXOPBMuNBkb05jhL9WcMdOeTq1vErhK04E6aj6Ky+o0oxUEHRgQHyCchkUsvbEexzK4hMMicwnURcMtdyiLab+cJ33//V7ByKvogkEq3RJDDLePNiZSSDldSEWsrQJePRGmcGsQ1jsFjI1JKW0A07PxU98tCT"
+    }
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "sudo apt-get -y update",
+      "sudo apt-get -y install software-properties-common",
+      "sudo apt-add-repository --yes --update ppa:ansible/ansible",
+      "sudo apt-get -y install ansible"
+    ]
+    connection {
+      type = "ssh"
+      user = "ubuntu"
+      private_key = "${file("vpn.pem")}"
+      }
+  }
+  provisioner "file" {
+   source = "./${local_file.aws_ansible_vars.filename}"
+   destination = "/home/ubuntu/${local_file.aws_ansible_vars.filename}"  
+   connection {
+    type = "ssh"
+    user = "ubuntu"
+    private_key = "${file("vpn.pem")}"
+    }
+  }
+  provisioner "file" {
+   source = "./phoebe_vpn_azure.yaml"
+   destination = "/home/ubuntu/phoebe_vpn_azure.yaml"  
+   connection {
+    type = "ssh"
+    user = "ubuntu"
+    private_key = "${file("vpn.pem")}"
     }
   }
 }
 
-resource "null_resource" "local_exec" {
-  provisioner "local-exec" {
-    command = "sleep 120; export ANSIBLE_HOST_KEY_CHECKING=False; ansible-playbook -u ubuntu --private-key ./phoebevpn.pem -i '168.62.188.182,' phoebe_vpn_azure.yaml -e ansible_python_interpreter=/usr/bin/python3 --extra-vars 'azure_private_ip=10.0.1.4 azure_private_subnet=10.0.1.0/24 aws_public_ip=52.72.32.135 aws_private_subnet=172.31.64.0/24'"
+resource "local_file" "azure_ansible_vars" {
+    content     = "azure_public_ip: ${azurerm_public_ip.publicip.ip_address}\nazure_vpn_subnet: ${azurerm_subnet.subnet.address_prefix}\nazure_private_ip: ${azurerm_network_interface.publicNIC.private_ip_address}"
+    filename = "./azure_ansible_vars.yml"
+}
+
+resource "null_resource" "azure_exec" {
+  triggers = {
+    azurerm_virtual_machine_id = "${azurerm_virtual_machine.terraform_vm.id}" # Needed this trigger because azurerm_public_ip is created before the VM is built.  So this would execute before the VM was ready.
+  }
+  provisioner "remote-exec" {
+        inline = ["ansible-playbook phoebe_vpn_azure.yaml"]
+        connection {
+          type = "ssh"
+          user = "ubuntu"
+          private_key = "${file("vpn.pem")}"
+          host = "${azurerm_public_ip.publicip.ip_address}"
+        }
   }
 }
 
-output "azure_vpn_subnet" {
-  value = "${azurerm_subnet.subnet.address_prefix}"
+resource "null_resource" "aws_restart_ipsec" {
+  triggers = {
+    azurerm_virtual_machine_id = "${azurerm_virtual_machine.terraform_vm.id}" # Needed this to restart the AWS IPSEC service as it finishes too far ahead of the azure service.
+  }
+  provisioner "remote-exec" {
+        inline = ["sudo service ipsec restart"]
+        connection {
+          type = "ssh"
+          user = "ubuntu"
+          private_key = "${file("vpn.pem")}"
+          host = "${aws_instance.aws_vpn_server.public_ip}"
+        }
+  }
 }
 
-output "public_ip_address" {
+output "azure_public_ip" {
   value = "${azurerm_public_ip.publicip.ip_address}"
+}
+output "azure_vpn_subnet" {
+  value = "${azurerm_subnet.subnet.address_prefix}"
 }
 
 output "azure_private_ip" {

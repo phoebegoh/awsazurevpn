@@ -1,7 +1,7 @@
-- hosts: all
+- hosts: localhost
   become: true
   vars_files:
-    - ./ansible_vars.yml
+    - ./azure_ansible_vars.yml
   tasks:
     - name: install strongswan
       apt: name=strongswan update_cache=yes
@@ -46,12 +46,12 @@
               mobike=no
 
           conn net-net
-              left={{ aws_public_ip }}
+              left={{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}
               leftsubnet=172.31.64.0/24
               leftid=@aws
               leftfirewall=no
               right={{ azure_public_ip }}
-              rightsubnet=10.0.1.0/24
+              rightsubnet={{ azure_vpn_subnet}}
               rightid=@azure
               ike=aes256-sha2_256-modp2048!
               esp=aes256-sha2_256!
