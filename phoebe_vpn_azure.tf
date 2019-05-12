@@ -119,6 +119,7 @@ output "azure_vpn_subnet" {
 output "public_ip_address" {
   value = "${azurerm_public_ip.publicip.ip_address}"
 }
-output "private_ip_address" {
-  value = "${azurerm_public_ip.publicip.private_ip_address}"
+
+output "azure_private_ip" {
+  value = "${azurerm_network_interface.publicNIC.private_ip_address}"
 }
