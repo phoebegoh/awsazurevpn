@@ -30,6 +30,12 @@ resource "aws_route" "default" {
   gateway_id             = "${aws_internet_gateway.gw.id}"
 }
 
+resource "aws_route" "vpn" {
+  route_table_id         = "${aws_vpc.main.main_route_table_id}"
+  destination_cidr_block = "10.0.1.0/24"
+  instance_id             = "${aws_instance.aws_vpn_server.id}"
+}
+
 resource "aws_security_group" "sshworld" {
   vpc_id      = "${aws_vpc.main.id}"
   name        = "sshworld"
@@ -107,7 +113,14 @@ resource "null_resource" "aws_exec" {
         }
   }
 }
-
+resource "aws_instance" "aws_testvm" {
+  subnet_id                   = "${aws_subnet.backend.id}"
+  ami                         = "ami-0ac019f4fcb7cb7e6"
+  associate_public_ip_address = 1
+  instance_type               = "t2.micro"
+  key_name                    = "phoebevpn"
+  vpc_security_group_ids      = ["${aws_security_group.sshworld.id}"]
+}
 
 output "aws_vpn_subnet" {
   value = "${aws_subnet.backend.cidr_block}"
@@ -117,5 +130,8 @@ output "aws_private_ip" {
 }
 output "aws_public_ip" {
   value = "${aws_instance.aws_vpn_server.public_ip}"
+}
+output "aws_testvm_private_ip" {
+  value = "${aws_instance.aws_testvm.private_ip}"
 }
 
