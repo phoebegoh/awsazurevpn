@@ -33,5 +33,4 @@ override.tf.json
 # !example_override.tf
 
 # Ignore files created by terraform (output that is uploaded to servers)
-phoebe_vpn_aws.yaml
-phoebe_vpn_azure.yaml
+*ansible_vars.yaml

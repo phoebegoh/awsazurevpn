@@ -65,6 +65,9 @@ resource "aws_instance" "aws_vpn_server" {
   vpc_security_group_ids      = ["${aws_security_group.sshworld.id}"]
   source_dest_check           = "false"
 
+  tags = {
+    Name = "phoebe_vpc"
+  }
   provisioner "remote-exec" {
     inline = [
       "sudo apt-get -y update",
