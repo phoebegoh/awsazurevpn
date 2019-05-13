@@ -22,14 +22,14 @@ resource "azurerm_subnet" "subnet" {
 }
 resource "azurerm_route_table" "azureroutetable" {
   name                   = "phoebe_vpn_route_table"
-  location               = "{$azurerm_resource_group.rg.location}"
+  location               = "${azurerm_resource_group.rg.location}"
   resource_group_name    = "${azurerm_resource_group.rg.name}"
 
   route {
     name                 = "phoebe_vpn_route_1"
     address_prefix         = "172.31.64.0/24"
     next_hop_type          = "VirtualAppliance"
-    next_hop_in_ip_address = "{$azurerm_network_interface.publicNIC.private_ip_address}"
+    next_hop_in_ip_address = "${azurerm_network_interface.publicNIC.private_ip_address}"
   }
 }
 resource "azurerm_subnet_route_table_association" "azureroutetableassociation" {
@@ -65,6 +65,7 @@ resource "azurerm_network_interface" "publicNIC" {
   location                  = "${azurerm_resource_group.rg.location}"
   resource_group_name       = "${azurerm_resource_group.rg.name}"
   network_security_group_id = "${azurerm_network_security_group.nsg.id}"
+  enable_ip_forwarding      = "true"
 
   ip_configuration {
     name                          = "phoebe_vpn_privateIP"

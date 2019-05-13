@@ -63,6 +63,7 @@ resource "aws_instance" "aws_vpn_server" {
   instance_type               = "t2.micro"
   key_name                    = "phoebevpn"
   vpc_security_group_ids      = ["${aws_security_group.sshworld.id}"]
+  source_dest_check           = "false"
 
   provisioner "remote-exec" {
     inline = [
