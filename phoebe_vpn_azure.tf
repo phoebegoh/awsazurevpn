@@ -107,14 +107,14 @@ resource "azurerm_virtual_machine" "terraform_vm" {
   }
 
   storage_os_disk {
-    name              = "osdisk-1"
+    name              = "vpn-osdisk-1"
     caching           = "ReadWrite"
     create_option     = "FromImage"
     managed_disk_type = "Standard_LRS"
   }
 
   os_profile {
-    computer_name  = "strongsean"
+    computer_name  = "azurevpn"
     admin_username = "ubuntu"
   }
 
@@ -242,6 +242,6 @@ output "azure_public_ip" {
 output "azure_private_ip" {
   value = "${azurerm_network_interface.publicNIC.private_ip_address}"
 }
-output "testvm_private_ip" {
+output "azure_testvm_private_ip" {
   value = "${azurerm_network_interface.testVMNIC.private_ip_address}"
 }

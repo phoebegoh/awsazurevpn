@@ -19,10 +19,10 @@
       lineinfile:
         path: /etc/sysctl.conf
         line: net.ipv4.conf.all.send_redirects=0
-    - name: echo "net/ipv4/ip_no_pmtu_disc=1" >> /etc/sysctl.conf
+    - name: echo "net.ipv4.ip_no_pmtu_disc=1" >> /etc/sysctl.conf
       lineinfile:
         path: /etc/sysctl.conf
-        line: net/ipv4/ip_no_pmtu_disc=1
+        line: net.ipv4.ip_no_pmtu_disc=1
     - name: sysctl -p /etc/sysctl.conf
       command: sysctl -p /etc/sysctl.conf
     - name: create /etc/ipsec.secrets

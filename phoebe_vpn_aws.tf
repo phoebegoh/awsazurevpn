@@ -3,12 +3,12 @@ provider "aws" {
 }
 
 # AWS
-resource "aws_key_pair" "phoebevpn" {
-  key_name   = "phoebevpn"
+resource "aws_key_pair" "vpnkey" {
+  key_name   = "vpnkey"
   public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCzyQehHEk01+XCMwdTIUHZCu7LIW5Ewx8PnBxw6y7/hKw9qKun1wfn5+NJgc5Dzj8JLBY51TGNdWxOr13e3dz2uizVw6j3tFSgHBT2ifGB/+ET7K8MCY/OUmjqbzukoYswGLQP+03VvwIySeFPfOcDy7i2HfOHYBMFPLA/5glHqDca0pY4+8AHNbrtXOPBMuNBkb05jhL9WcMdOeTq1vErhK04E6aj6Ky+o0oxUEHRgQHyCchkUsvbEexzK4hMMicwnURcMtdyiLab+cJ33//V7ByKvogkEq3RJDDLePNiZSSDldSEWsrQJePRGmcGsQ1jsFjI1JKW0A07PxU98tCT"
 }
 
-resource "aws_vpc" "main" {
+resource "aws_vpc" "vpc" {
   cidr_block = "172.31.0.0/16"
   tags = {
     Name = "phoebe_vpc"
@@ -16,28 +16,29 @@ resource "aws_vpc" "main" {
 }
 
 resource "aws_subnet" "backend" {
-  vpc_id     = "${aws_vpc.main.id}"
-  cidr_block = "172.31.64.0/24"
+  vpc_id                  = "${aws_vpc.vpc.id}"
+  cidr_block              = "172.31.64.0/24"
+  map_public_ip_on_launch = "false"
 }
 
 resource "aws_internet_gateway" "gw" {
-  vpc_id = "${aws_vpc.main.id}"
+  vpc_id = "${aws_vpc.vpc.id}"
 }
 
 resource "aws_route" "default" {
-  route_table_id         = "${aws_vpc.main.main_route_table_id}"
+  route_table_id         = "${aws_vpc.vpc.main_route_table_id}"
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = "${aws_internet_gateway.gw.id}"
 }
 
 resource "aws_route" "vpn" {
-  route_table_id         = "${aws_vpc.main.main_route_table_id}"
+  route_table_id         = "${aws_vpc.vpc.main_route_table_id}"
   destination_cidr_block = "10.0.1.0/24"
   instance_id             = "${aws_instance.aws_vpn_server.id}"
 }
 
 resource "aws_security_group" "sshworld" {
-  vpc_id      = "${aws_vpc.main.id}"
+  vpc_id      = "${aws_vpc.vpc.id}"
   name        = "sshworld"
   description = "Allow SSH from the world"
 
@@ -61,12 +62,12 @@ resource "aws_instance" "aws_vpn_server" {
   ami                         = "ami-0ac019f4fcb7cb7e6"
   associate_public_ip_address = 1
   instance_type               = "t2.micro"
-  key_name                    = "phoebevpn"
+  key_name                    = "vpnkey"
   vpc_security_group_ids      = ["${aws_security_group.sshworld.id}"]
   source_dest_check           = "false"
 
   tags = {
-    Name = "phoebe_vpc"
+    Name = "vpn_server"
   }
   provisioner "remote-exec" {
     inline = [
@@ -120,10 +121,15 @@ resource "null_resource" "aws_exec" {
 resource "aws_instance" "aws_testvm" {
   subnet_id                   = "${aws_subnet.backend.id}"
   ami                         = "ami-0ac019f4fcb7cb7e6"
-  associate_public_ip_address = 1
   instance_type               = "t2.micro"
-  key_name                    = "phoebevpn"
+  key_name                    = "vpnkey"
   vpc_security_group_ids      = ["${aws_security_group.sshworld.id}"]
+
+  tags = {
+    Name = "phoebe_vpn_test_vm"
+  }
+
+  provisioner "remote-exec" {}
 }
 
 output "aws_vpn_subnet" {
@@ -138,4 +144,3 @@ output "aws_public_ip" {
 output "aws_testvm_private_ip" {
   value = "${aws_instance.aws_testvm.private_ip}"
 }
-
