@@ -33,4 +33,4 @@ override.tf.json
 # !example_override.tf
 
 # Ignore files created by terraform (output that is uploaded to servers)
-*ansible_vars.yaml
+*ansible_vars.yml
