@@ -1,3 +1,0 @@
-azure_public_ip: 40.121.35.82
-azure_vpn_subnet: 10.0.1.0/24
-azure_private_ip: 10.0.1.5
