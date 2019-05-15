@@ -19,10 +19,10 @@
       lineinfile:
         path: /etc/sysctl.conf
         line: net.ipv4.conf.all.send_redirects=0
-    - name: echo "net.ipv4.ip_no_pmtu_disc=1" >> /etc/sysctl.conf
+    - name: echo "net/ipv4/ip_no_pmtu_disc=1" >> /etc/sysctl.conf
       lineinfile:
         path: /etc/sysctl.conf
-        line: net.ipv4.ip_no_pmtu_disc=1
+        line: net/ipv4/ip_no_pmtu_disc=1
     - name: sysctl -p /etc/sysctl.conf
       command: sysctl -p /etc/sysctl.conf
     - name: create /etc/ipsec.secrets
@@ -56,8 +56,8 @@
               ike=aes256-sha2_256-modp2048!
               esp=aes256-sha2_256!
               auto=start
-    - name: systemctl restart strongswan
-      command: systemctl restart strongswan
+    #- name: systemctl restart strongswan
+    #  command: systemctl restart strongswan
     - name: ufw allow OpenSSH
       command: ufw allow OpenSSH
     - name: ufw allow 500,4500/udp

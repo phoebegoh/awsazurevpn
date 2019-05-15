@@ -118,6 +118,21 @@ resource "null_resource" "aws_exec" {
         }
   }
 }
+resource "null_resource" "aws_restart_ipsec" {
+  depends_on = ["null_resource.azure_exec","null_resource.aws_exec"]
+  
+  provisioner "remote-exec" {
+        inline = ["sudo systemctl restart strongswan"]
+        connection {
+          type = "ssh"
+          user = "ubuntu"
+          private_key = "${file("vpn.pem")}"
+          host = "${aws_instance.aws_vpn_server.public_ip}"
+        }
+  }
+}
+
+/*
 resource "aws_instance" "aws_testvm" {
   subnet_id                   = "${aws_subnet.backend.id}"
   ami                         = "ami-0ac019f4fcb7cb7e6"
@@ -131,6 +146,7 @@ resource "aws_instance" "aws_testvm" {
 
   provisioner "remote-exec" {}
 }
+*/
 
 output "aws_vpn_subnet" {
   value = "${aws_subnet.backend.cidr_block}"
@@ -141,6 +157,8 @@ output "aws_private_ip" {
 output "aws_public_ip" {
   value = "${aws_instance.aws_vpn_server.public_ip}"
 }
+/*
 output "aws_testvm_private_ip" {
   value = "${aws_instance.aws_testvm.private_ip}"
 }
+*/

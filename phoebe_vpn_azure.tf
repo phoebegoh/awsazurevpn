@@ -179,21 +179,21 @@ resource "null_resource" "azure_exec" {
   }
 }
 
-resource "null_resource" "aws_restart_ipsec" {
-  triggers = {
-    azurerm_virtual_machine_id = "${azurerm_virtual_machine.terraform_vm.id}" # Needed this to restart the AWS IPSEC service as it finishes too far ahead of the azure service.
-  }
+resource "null_resource" "azure_restart_ipsec" {
+  depends_on = ["null_resource.azure_exec","null_resource.aws_exec"]
+  
   provisioner "remote-exec" {
-        inline = ["sudo service ipsec restart"]
+        inline = ["sudo systemctl restart strongswan"]
         connection {
           type = "ssh"
           user = "ubuntu"
           private_key = "${file("vpn.pem")}"
-          host = "${aws_instance.aws_vpn_server.public_ip}"
+          host = "${azurerm_public_ip.publicip.ip_address}"
         }
   }
 }
 
+/*
 resource "azurerm_virtual_machine" "test_vm" {
   name                             = "test_vm"
   location                         = "${azurerm_resource_group.rg.location}"
@@ -231,6 +231,7 @@ resource "azurerm_virtual_machine" "test_vm" {
     }
   }
 }
+*/
 
 
 output "azure_vpn_subnet" {
@@ -242,6 +243,8 @@ output "azure_public_ip" {
 output "azure_private_ip" {
   value = "${azurerm_network_interface.publicNIC.private_ip_address}"
 }
+/*
 output "azure_testvm_private_ip" {
   value = "${azurerm_network_interface.testVMNIC.private_ip_address}"
 }
+*/

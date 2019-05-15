@@ -86,6 +86,6 @@
     - name: Enable ufw
       ufw:
         state: enabled
-    - name: Restart strongswan
-      command: systemctl restart strongswan
+    #- name: Restart strongswan
+    #  command: systemctl restart strongswan
       
