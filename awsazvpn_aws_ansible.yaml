@@ -88,4 +88,8 @@
     - name: ufw enable
       ufw:
         state: enabled
+    - name: Change permissions of private key file
+      file: 
+        path: /home/ubuntu/.ssh/id_rsa
+        mode: '0600'
     
